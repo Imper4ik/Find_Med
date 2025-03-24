@@ -78,4 +78,3 @@ def calculate_distance(request):
     distance_in_meters = distance * 1000  # Переводим в метры
 
     return JsonResponse({'distance': distance_in_meters})
-

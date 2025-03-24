@@ -1,135 +1,190 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Find Med</title>
-    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key={{ google_api_key }}&libraries=places&callback=initMap" async defer></script>
+    <title>Find Med - Поиск медицинских учреждений</title>
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ google_api_key }}&callback=initMap" async defer></script>
     <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        header {
+            background-color: #3b8d99;
+            color: white;
+            padding: 15px;
+            text-align: center;
+        }
+        .container {
+            padding: 20px;
+        }
+        .form-container {
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        select, input[type="number"] {
+            padding: 10px;
+            font-size: 16px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #3b8d99;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #2c6f7b;
+        }
+        .hospital-list {
+            margin-top: 20px;
+        }
+        .hospital-card {
+            background-color: white;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        .hospital-card h3 {
+            margin-top: 0;
+        }
         #map {
-            height: 500px;
             width: 100%;
+            height: 400px;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <h1>Find Medical Institutions</h1>
-    <button id="findHospitalsBtn1">Find My Location</button>
-    <button id="calculateDistanceBtn" disabled>Calculate Distance to Bródnowski Hospital</button>
-    <button id="findHospitalsBtn2">Найти больницы</button>
-    <div id="map"></div>
+    <header>
+        <h1>Поиск медицинских учреждений</h1>
+    </header>
 
-    <script type="text/javascript">
-    let map, userLocationMarker, userLocation;
+    <div class="container">
+        <div class="form-container">
+            <div>
+                <select id="radius">
+                    <option value="1000">1 км</option>
+                    <option value="2000">2 км</option>
+                    <option value="5000">5 км</option>
+                    <option value="10000">10 км</option>
+                    <option value="20000">20 км</option>
+                </select>
+                <input type="number" id="custom-radius" placeholder="Или введите радиус вручную (м)" min="100" step="100" style="width: 150px;">
+            </div>
+            <button onclick="findHospitals()">Найти</button>
+        </div>
 
-    function initMap() {
-        const mapOptions = {
-            center: { lat: 52.229675, lng: 21.012230 },  // По умолчанию центр карты (Польша)
-            zoom: 12,
-        };
+        <div id="hospitals" class="hospital-list">
+            <!-- Здесь будут отображаться больницы -->
+        </div>
 
-        map = new google.maps.Map(document.getElementById('map'), mapOptions);
+        <div id="map"></div> <!-- Карта Google -->
+    </div>
 
-        // Слушаем кнопку "Find My Location"
-        document.getElementById('findHospitalsBtn1').addEventListener('click', findMyLocation);
-        document.getElementById('calculateDistanceBtn').addEventListener('click', calculateDistance);
-        document.getElementById('findHospitalsBtn2').addEventListener('click', findHospitals);  // добавлена кнопка для поиска больниц
-    }
+    <script>
+        let map;
+        let userMarker;
 
-    function findMyLocation() {
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const userLat = position.coords.latitude;
-                    const userLng = position.coords.longitude;
-                    userLocation = new google.maps.LatLng(userLat, userLng);
+        // Функция инициализации карты
+        function initMap() {
+            // Создаем карту с центром на Варшаве
+            map = new google.maps.Map(document.getElementById("map"), {
+                center: { lat: 52.2298, lng: 21.0118 }, // Координаты Варшавы
+                zoom: 12
+            });
 
-                    if (userLocationMarker) {
-                        userLocationMarker.setMap(null);  // Убираем старый маркер
+            // Получаем текущее местоположение
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+
+                    // Создаем метку для текущего местоположения
+                    if (userMarker) {
+                        userMarker.setPosition(new google.maps.LatLng(lat, lng)); // Если метка уже есть, обновляем её
+                    } else {
+                        userMarker = new google.maps.Marker({
+                            position: { lat, lng },
+                            map: map,
+                            title: "Ваше местоположение"
+                        });
                     }
 
-                    // Добавляем маркер для текущего местоположения
-                    userLocationMarker = new google.maps.Marker({
-                        position: userLocation,
-                        map: map,
-                        title: 'You are here',
-                    });
-
-                    map.setCenter(userLocation);
-                    map.setZoom(14);
-
-                    // Разблокируем кнопку для расчета дистанции
-                    document.getElementById('calculateDistanceBtn').disabled = false;
-                },
-                () => {
-                    alert('Unable to retrieve your location');
-                }
-            );
-        } else {
-            alert('Geolocation is not supported by this browser');
-        }
-    }
-
-    function findHospitals() {
-        if (!userLocation) {
-            alert("Сначала определите ваше местоположение.");
-            return;
-        }
-
-        fetch(`/find-hospitals/?lat=${userLocation.lat()}&lng=${userLocation.lng()}&radius=5000`)
-            .then(response => response.json())
-            .then(data => {
-                console.log("Ответ сервера:", data);  // Логируем ответ от сервера
-
-                if (data.hospitals) {
-                    data.hospitals.forEach(hospital => {
-                        console.log("Больница:", hospital);  // Логируем данные каждой больницы
-
-                        // Преобразуем lat и lng в числа, если они еще не числа
-                        const lat = parseFloat(hospital.lat);
-                        const lng = parseFloat(hospital.lng);
-
-                        if (!isNaN(lat) && !isNaN(lng)) {
-                            new google.maps.Marker({
-                                position: { lat: lat, lng: lng },
-                                map: map,
-                                title: hospital.name
-                            });
-                        } else {
-                            console.error("Некорректные координаты для больницы:", hospital);
-                        }
-                    });
-                } else {
-                    alert("Не удалось найти больницы.");
-                }
-            })
-            .catch(error => console.error("Ошибка:", error));
-    }
-
-    function calculateDistance() {
-        if (!userLocation) {
-            alert('Please find your location first.');
-            return;
-        }
-
-        const hospitalLocation = { lat: 52.2892, lng: 21.0194 };  // Координаты Mazovian "Bródnowski" Hospital
-
-        const service = new google.maps.DirectionsService();
-        const request = {
-            origin: userLocation,
-            destination: hospitalLocation,
-            travelMode: google.maps.TravelMode.DRIVING,
-        };
-
-        service.route(request, (result, status) => {
-            if (status === google.maps.DirectionsStatus.OK) {
-                const distance = result.routes[0].legs[0].distance.text;
-                alert('Distance to Bródnowski Hospital: ' + distance);
+                    // Центрируем карту на текущем местоположении
+                    map.setCenter(new google.maps.LatLng(lat, lng));
+                }, function(error) {
+                    alert("Не удалось получить ваше местоположение.");
+                });
             } else {
-                console.error('Error calculating route:', status);
+                alert("Геолокация не поддерживается вашим браузером.");
             }
-        });
-    }
+        }
+
+        // Функция поиска больниц
+        function findHospitals() {
+            let radius = document.getElementById("radius").value;
+            const customRadius = document.getElementById("custom-radius").value;
+            if (customRadius) {
+                radius = customRadius;
+            }
+
+            if (!userMarker) {
+                alert("Не удалось определить ваше местоположение.");
+                return;
+            }
+
+            const lat = userMarker.getPosition().lat();
+            const lng = userMarker.getPosition().lng();
+
+            // Формируем запрос к серверу для получения больниц
+            fetch(`/find-hospitals/?lat=${lat}&lng=${lng}&radius=${radius}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.hospitals) {
+                        displayHospitals(data.hospitals);
+                    } else {
+                        alert("Больницы не найдены.");
+                    }
+                })
+                .catch(error => console.error("Ошибка при получении данных:", error));
+        }
+
+        // Функция отображения больниц на странице
+        function displayHospitals(hospitals) {
+            const container = document.getElementById("hospitals");
+            container.innerHTML = ""; // Очищаем предыдущие результаты
+
+            // Добавляем метки на карту для каждой больницы
+            hospitals.forEach(hospital => {
+                const card = document.createElement("div");
+                card.className = "hospital-card";
+                card.innerHTML = `
+                    <h3>${hospital.name}</h3>
+                    <p>Адрес: ${hospital.address}</p>
+                    <p>Координаты: ${hospital.lat}, ${hospital.lng}</p>
+                `;
+                container.appendChild(card);
+
+                // Создаем метку для каждой больницы
+                const hospitalMarker = new google.maps.Marker({
+                    position: { lat: hospital.lat, lng: hospital.lng },
+                    map: map,
+                    title: hospital.name
+                });
+            });
+        }
     </script>
 </body>
 </html>
