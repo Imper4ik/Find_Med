@@ -34,6 +34,10 @@
             border: 1px solid #ccc;
             border-radius: 5px;
         }
+        .button-container {
+            display: flex;
+            gap: 10px; /* Для промежутка между кнопками */
+        }
         button {
             padding: 10px 20px;
             font-size: 16px;
@@ -86,11 +90,15 @@
                     <option value="all">Все типы</option>
                     <option value="hospital">Больницы</option>
                     <option value="pharmacy">Аптеки</option>
-                    <option value="clinic">Поликлиники</option>
+                    <option value="medical clinic">Поликлиники</option>
                 </select>
-
             </div>
-            <button onclick="findHospitals()">Найти</button>
+
+            <!-- Обновленная обертка для кнопок -->
+            <div class="button-container">
+                <button onclick="findHospitals()">Найти</button>
+                <button onclick="goToHomePage()">На главную</button>
+            </div>
         </div>
 
         <div id="hospitals" class="hospital-list">
@@ -98,6 +106,7 @@
         </div>
 
         <div id="map"></div> <!-- Карта Google -->
+
     </div>
 
     <script>
@@ -135,7 +144,7 @@
             }
         }
 
-       // Функция поиска медицинских учреждений
+        // Функция поиска медицинских учреждений
         function findHospitals() {
             let radius = document.getElementById("radius").value;
             const customRadius = document.getElementById("custom-radius").value;
@@ -174,7 +183,6 @@
                 .catch(error => console.error("Ошибка при получении данных:", error));
         }
 
-
         // Функция отображения медицинских учреждений на странице
         function displayHospitals(hospitals) {
             const container = document.getElementById("hospitals");
@@ -196,6 +204,11 @@
                     title: hospital.name
                 });
             });
+        }
+
+        // Функция перехода на главную страницу
+        function goToHomePage() {
+            window.location.href = '/'; // Замените '/' на URL вашей главной страницы
         }
     </script>
 </body>
