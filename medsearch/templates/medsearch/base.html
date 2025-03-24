@@ -1,0 +1,34 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Find Med{% endblock %}</title>
+    <link rel="stylesheet" href="{% static 'medsearch/css/style.css' %}">
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ google_api_key }}&libraries=places"></script>
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <header>
+        <h1>Find Medical Facilities</h1>
+        <nav>
+            <ul>
+                <li><a href="/">Home</a></li>
+                <li><a href="/about">About</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Find Med. All rights reserved.</p>
+    </footer>
+
+    <script src="{% static 'medsearch/js/main.js' %}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

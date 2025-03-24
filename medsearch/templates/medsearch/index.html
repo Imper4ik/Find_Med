@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find Med</title>
+    <script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?key={{ google_api_key }}&libraries=places&callback=initMap" async defer></script>
+    <style>
+        #map {
+            height: 500px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <h1>Find Medical Institutions</h1>
+    <button id="findHospitalsBtn">Find Hospitals</button>
+    <div id="map"></div>
+
+    <script type="text/javascript">
+    let map;
+    let userLocationMarker;  // Объявляем переменную для маркера
+
+    function initMap() {
+        const mapOptions = {
+            center: { lat: 52.229675, lng: 21.012230 },
+            zoom: 12,
+        };
+
+        map = new google.maps.Map(document.getElementById('map'), mapOptions);
+
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const userLat = position.coords.latitude;
+                    const userLng = position.coords.longitude;
+
+                    const userLocation = new google.maps.LatLng(userLat, userLng);
+
+                    // Убираем старый маркер, если он существует
+                    if (userLocationMarker) {
+                        userLocationMarker.setMap(null);
+                    }
+
+                    // Создаем новый маркер
+                    userLocationMarker = new google.maps.Marker({
+                        position: userLocation,
+                        map: map,
+                        title: 'You are here',
+                    });
+
+                    map.setCenter(userLocation);
+                    map.setZoom(14);
+                },
+                () => {
+                    alert('Unable to retrieve your location');
+                }
+            );
+        } else {
+            alert('Geolocation is not supported by this browser');
+        }
+    }
+</script>
+
+</body>
+</html>
