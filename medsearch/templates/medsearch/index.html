@@ -14,8 +14,9 @@
 </head>
 <body>
     <h1>Find Medical Institutions</h1>
-    <button id="findHospitalsBtn">Find My Location</button>
+    <button id="findHospitalsBtn1">Find My Location</button>
     <button id="calculateDistanceBtn" disabled>Calculate Distance to Bródnowski Hospital</button>
+    <button id="findHospitalsBtn2">Найти больницы</button>
     <div id="map"></div>
 
     <script type="text/javascript">
@@ -30,8 +31,9 @@
         map = new google.maps.Map(document.getElementById('map'), mapOptions);
 
         // Слушаем кнопку "Find My Location"
-        document.getElementById('findHospitalsBtn').addEventListener('click', findMyLocation);
+        document.getElementById('findHospitalsBtn1').addEventListener('click', findMyLocation);
         document.getElementById('calculateDistanceBtn').addEventListener('click', calculateDistance);
+        document.getElementById('findHospitalsBtn2').addEventListener('click', findHospitals);  // добавлена кнопка для поиска больниц
     }
 
     function findMyLocation() {
@@ -66,6 +68,42 @@
         } else {
             alert('Geolocation is not supported by this browser');
         }
+    }
+
+    function findHospitals() {
+        if (!userLocation) {
+            alert("Сначала определите ваше местоположение.");
+            return;
+        }
+
+        fetch(`/find-hospitals/?lat=${userLocation.lat()}&lng=${userLocation.lng()}&radius=5000`)
+            .then(response => response.json())
+            .then(data => {
+                console.log("Ответ сервера:", data);  // Логируем ответ от сервера
+
+                if (data.hospitals) {
+                    data.hospitals.forEach(hospital => {
+                        console.log("Больница:", hospital);  // Логируем данные каждой больницы
+
+                        // Преобразуем lat и lng в числа, если они еще не числа
+                        const lat = parseFloat(hospital.lat);
+                        const lng = parseFloat(hospital.lng);
+
+                        if (!isNaN(lat) && !isNaN(lng)) {
+                            new google.maps.Marker({
+                                position: { lat: lat, lng: lng },
+                                map: map,
+                                title: hospital.name
+                            });
+                        } else {
+                            console.error("Некорректные координаты для больницы:", hospital);
+                        }
+                    });
+                } else {
+                    alert("Не удалось найти больницы.");
+                }
+            })
+            .catch(error => console.error("Ошибка:", error));
     }
 
     function calculateDistance() {

@@ -5,4 +5,5 @@ urlpatterns = [
     path('', views.index, name='index'),
     path('hospitals/', views.find_hospitals, name='find_hospitals'),
     path('distance/', views.calculate_distance, name='calculate_distance'),
+    path('find-hospitals/', views.find_hospitals, name='find_hospitals'),
 ]

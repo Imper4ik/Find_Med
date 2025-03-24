@@ -1,8 +1,12 @@
 from django.shortcuts import render
-from django.http import JsonResponse
-import requests
-
 from University_Project.settings import GOOGLE_API_KEY
+from django.http import JsonResponse
+from django.conf import settings
+import requests
+import logging
+
+# Настроим логирование
+logger = logging.getLogger(__name__)
 
 
 # Индексная страница
@@ -13,30 +17,43 @@ def index(request):
     return render(request, 'medsearch/index.html', context)
 
 
-# Эндпоинт для поиска больниц
 def find_hospitals(request):
-    latitude = request.GET.get('latitude')
-    longitude = request.GET.get('longitude')
-    radius = request.GET.get('radius', 5000)  # Радиус по умолчанию 5000 метров
+    try:
+        # Получаем параметры lat, lng и radius из GET-запроса
+        lat = float(request.GET.get('lat'))
+        lng = float(request.GET.get('lng'))
+        radius = int(request.GET.get('radius', 5000))  # Радиус по умолчанию 5000 метров
 
-    # Пример запроса в Google Places API для поиска больниц
-    api_key = GOOGLE_API_KEY
-    url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={latitude},{longitude}&radius={radius}&type=hospital&key={api_key}"
+        # Ваш ключ API Google
+        api_key = settings.GOOGLE_API_KEY
 
-    response = requests.get(url)
-    data = response.json()
+        # URL для запроса Google Places API
+        url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={lat},{lng}&radius={radius}&type=hospital&key={api_key}"
 
-    hospitals = [
-        {
-            'name': hospital['name'],
-            'address': hospital.get('vicinity', 'Не указано'),
-            'latitude': hospital['geometry']['location']['lat'],
-            'longitude': hospital['geometry']['location']['lng']
-        }
-        for hospital in data['results']
-    ]
+        # Получение данных с API
+        response = requests.get(url)
 
-    return JsonResponse({'hospitals': hospitals})
+        # Проверяем, успешен ли запрос
+        if response.status_code != 200:
+            return JsonResponse({"error": "Не удалось получить данные от Google API"}, status=500)
+
+        data = response.json()
+
+        hospitals = []
+
+        # Извлекаем информацию о больницах
+        for result in data.get('results', []):
+            hospital = {
+                'name': result.get('name'),
+                'lat': result['geometry']['location']['lat'],
+                'lng': result['geometry']['location']['lng'],
+            }
+            hospitals.append(hospital)
+
+        return JsonResponse({'hospitals': hospitals})
+
+    except Exception as e:
+        return JsonResponse({"error": "Произошла ошибка на сервере"}, status=500)
 
 
 # Эндпоинт для расчета расстояния до больницы
@@ -61,3 +78,4 @@ def calculate_distance(request):
     distance_in_meters = distance * 1000  # Переводим в метры
 
     return JsonResponse({'distance': distance_in_meters})
+
