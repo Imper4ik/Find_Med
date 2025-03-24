@@ -14,35 +14,39 @@
 </head>
 <body>
     <h1>Find Medical Institutions</h1>
-    <button id="findHospitalsBtn">Find Hospitals</button>
+    <button id="findHospitalsBtn">Find My Location</button>
+    <button id="calculateDistanceBtn" disabled>Calculate Distance to Bródnowski Hospital</button>
     <div id="map"></div>
 
     <script type="text/javascript">
-    let map;
-    let userLocationMarker;  // Объявляем переменную для маркера
+    let map, userLocationMarker, userLocation;
 
     function initMap() {
         const mapOptions = {
-            center: { lat: 52.229675, lng: 21.012230 },
+            center: { lat: 52.229675, lng: 21.012230 },  // По умолчанию центр карты (Польша)
             zoom: 12,
         };
 
         map = new google.maps.Map(document.getElementById('map'), mapOptions);
 
+        // Слушаем кнопку "Find My Location"
+        document.getElementById('findHospitalsBtn').addEventListener('click', findMyLocation);
+        document.getElementById('calculateDistanceBtn').addEventListener('click', calculateDistance);
+    }
+
+    function findMyLocation() {
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
                     const userLat = position.coords.latitude;
                     const userLng = position.coords.longitude;
+                    userLocation = new google.maps.LatLng(userLat, userLng);
 
-                    const userLocation = new google.maps.LatLng(userLat, userLng);
-
-                    // Убираем старый маркер, если он существует
                     if (userLocationMarker) {
-                        userLocationMarker.setMap(null);
+                        userLocationMarker.setMap(null);  // Убираем старый маркер
                     }
 
-                    // Создаем новый маркер
+                    // Добавляем маркер для текущего местоположения
                     userLocationMarker = new google.maps.Marker({
                         position: userLocation,
                         map: map,
@@ -51,6 +55,9 @@
 
                     map.setCenter(userLocation);
                     map.setZoom(14);
+
+                    // Разблокируем кнопку для расчета дистанции
+                    document.getElementById('calculateDistanceBtn').disabled = false;
                 },
                 () => {
                     alert('Unable to retrieve your location');
@@ -60,7 +67,31 @@
             alert('Geolocation is not supported by this browser');
         }
     }
-</script>
 
+    function calculateDistance() {
+        if (!userLocation) {
+            alert('Please find your location first.');
+            return;
+        }
+
+        const hospitalLocation = { lat: 52.2892, lng: 21.0194 };  // Координаты Mazovian "Bródnowski" Hospital
+
+        const service = new google.maps.DirectionsService();
+        const request = {
+            origin: userLocation,
+            destination: hospitalLocation,
+            travelMode: google.maps.TravelMode.DRIVING,
+        };
+
+        service.route(request, (result, status) => {
+            if (status === google.maps.DirectionsStatus.OK) {
+                const distance = result.routes[0].legs[0].distance.text;
+                alert('Distance to Bródnowski Hospital: ' + distance);
+            } else {
+                console.error('Error calculating route:', status);
+            }
+        });
+    }
+    </script>
 </body>
 </html>

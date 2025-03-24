@@ -1,39 +1,80 @@
 let map;
+let userLocationMarker;
 
 function initMap() {
-    // Определяем параметры карты
     const mapOptions = {
-        center: { lat: 52.2296756, lng: 21.0122287 },
-        zoom: 14,
+        center: { lat: 52.229675, lng: 21.012230 },
+        zoom: 12,
     };
 
-    // Инициализируем карту
-    map = new google.maps.Map(document.getElementById("map"), mapOptions);
-    console.log("Map initialized");
+    map = new google.maps.Map(document.getElementById('map'), mapOptions);
 
-    // Проверяем, поддерживает ли браузер геолокацию
+    // Если поддержка геолокации есть
     if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(function(position) {
-            const userLocation = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude
-            };
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const userLat = position.coords.latitude;
+                const userLng = position.coords.longitude;
 
-            console.log("User location:", userLocation);
+                const userLocation = new google.maps.LatLng(userLat, userLng);
 
-            // Добавляем маркер на карту для текущего местоположения
-            const userLocationMarker = new google.maps.Marker({
-                position: userLocation,
-                map: map,
-                title: 'Your Location'
-            });
+                if (userLocationMarker) {
+                    userLocationMarker.setMap(null); // Удаляем старый маркер
+                }
 
-            // Центрируем карту на текущее местоположение
-            map.setCenter(userLocation);
-        }, function(error) {
-            console.log("Error getting geolocation: " + error.message);
-        });
+                userLocationMarker = new google.maps.Marker({
+                    position: userLocation,
+                    map: map,
+                    title: 'You are here',
+                });
+
+                map.setCenter(userLocation);
+                map.setZoom(14);
+
+                // Кнопка для расчета расстояния
+                const findDistanceButton = document.getElementById('findDistanceBtn');
+                findDistanceButton.addEventListener('click', function() {
+                    calculateDistance(userLocation);
+                });
+            },
+            () => {
+                alert('Unable to retrieve your location');
+            }
+        );
     } else {
-        console.log('Geolocation is not supported by this browser.');
+        alert('Geolocation is not supported by this browser');
     }
 }
+
+function calculateDistance(userLocation) {
+    const service = new google.maps.DirectionsService();  // Используем DirectionsService
+
+    const request = {
+        origin: userLocation,  // Ваше местоположение
+        destination: { lat: 52.285314, lng: 21.014551 },  // Координаты больницы (Mazovian "Bródnowski" Hospital)
+        travelMode: google.maps.TravelMode.DRIVING
+    };
+
+    service.route(request, (result, status) => {
+        if (status === google.maps.DirectionsStatus.OK) {  // Проверка статуса
+            const distance = result.routes[0].legs[0].distance.text;
+            console.log('Distance to hospital:', distance);
+            alert('Distance to hospital: ' + distance);  // Покажем результат пользователю
+        } else {
+            console.error('Error calculating route:', status);
+            alert('Error calculating route: ' + status);
+        }
+    });
+}
+
+// Загружаем Google Maps API, передавая ключ из контекста
+function loadScript(src, callback) {
+    const script = document.createElement('script');
+    script.type = 'text/javascript';
+    script.src = src;
+    script.onload = callback;
+    document.body.appendChild(script);
+}
+
+// Подключаем Google Maps API с переданным ключом
+loadScript("https://maps.googleapis.com/maps/api/js?key={{ google_api_key }}&libraries=places&callback=initMap", initMap);
