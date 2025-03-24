@@ -28,7 +28,7 @@ def find_hospitals(request):
         api_key = settings.GOOGLE_API_KEY
 
         # URL для запроса Google Places API
-        url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={lat},{lng}&radius={radius}&type=hospital&key={api_key}"
+        url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={lat},{lng}&radius={radius}&type=hospital&keyword=hospital&key={api_key}"
 
         # Получение данных с API
         response = requests.get(url)
