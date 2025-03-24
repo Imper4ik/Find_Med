@@ -19,16 +19,18 @@ def index(request):
 
 def find_hospitals(request):
     try:
-        # Получаем параметры lat, lng и radius из GET-запроса
+        # Получаем параметры lat, lng, radius, type и keyword из GET-запроса
         lat = float(request.GET.get('lat'))
         lng = float(request.GET.get('lng'))
         radius = int(request.GET.get('radius', 5000))  # Радиус по умолчанию 5000 метров
+        keyword = request.GET.get('keyword', '')  # Ключевое слово
+        type_filter = request.GET.get('type', 'hospital')  # Тип учреждения по умолчанию - hospital
 
         # Ваш ключ API Google
         api_key = settings.GOOGLE_API_KEY
 
-        # URL для запроса Google Places API
-        url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={lat},{lng}&radius={radius}&type=hospital&keyword=hospital&key={api_key}"
+        # URL для запроса Google Places API с учетом типа и ключевого слова
+        url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={lat},{lng}&radius={radius}&type={type_filter}&keyword={keyword}&key={api_key}"
 
         # Получение данных с API
         response = requests.get(url)
@@ -41,10 +43,11 @@ def find_hospitals(request):
 
         hospitals = []
 
-        # Извлекаем информацию о больницах
+        # Извлекаем информацию о медицинских учреждениях
         for result in data.get('results', []):
             hospital = {
                 'name': result.get('name'),
+                'address': result.get('vicinity'),
                 'lat': result['geometry']['location']['lat'],
                 'lng': result['geometry']['location']['lng'],
             }
@@ -53,6 +56,7 @@ def find_hospitals(request):
         return JsonResponse({'hospitals': hospitals})
 
     except Exception as e:
+        logger.error(f"Error finding hospitals: {e}")
         return JsonResponse({"error": "Произошла ошибка на сервере"}, status=500)
 
 
