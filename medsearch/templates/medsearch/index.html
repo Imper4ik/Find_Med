@@ -10,6 +10,9 @@
             margin: 0;
             padding: 0;
             background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
         header {
             background-color: #3b8d99;
@@ -19,20 +22,36 @@
         }
         .container {
             padding: 20px;
+            flex-grow: 1; /* Позволяет контейнеру занимать доступное пространство */
         }
         .form-container {
             margin-bottom: 20px;
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
             display: flex;
+            flex-wrap: wrap; /* Позволяет элементам переноситься */
             justify-content: space-between;
             align-items: center;
+            gap: 10px; /* Пространство между элементами формы */
         }
-        select, input[type="number"] {
+        .form-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        select, input[type="number"], input[type="text"] { /* Добавлен тип text для возможного поиска по названию */
             padding: 10px;
             font-size: 16px;
-            margin-right: 10px;
             border: 1px solid #ccc;
             border-radius: 5px;
         }
+         input[type="number"]#custom-radius {
+             width: 200px; /* Немного увеличим ширину поля для радиуса */
+         }
+
         .button-container {
             display: flex;
             gap: 10px;
@@ -45,27 +64,116 @@
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            transition: background-color 0.3s ease; /* Плавный переход */
         }
         button:hover {
             background-color: #2c6f7b;
         }
         .hospital-list {
             margin-top: 20px;
+            display: grid; /* Используем grid для карточек */
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Адаптивные колонки */
+            gap: 15px; /* Пространство между карточками */
         }
         .hospital-card {
             background-color: white;
             padding: 15px;
-            margin-bottom: 15px;
             border-radius: 8px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column; /* Элементы внутри карточки в столбец */
         }
         .hospital-card h3 {
             margin-top: 0;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .hospital-card p {
+            margin: 5px 0;
+            color: #555;
+            font-size: 0.9em;
+        }
+        .hospital-card a {
+            color: #3b8d99;
+            text-decoration: none;
+        }
+         .hospital-card a:hover {
+             text-decoration: underline;
+         }
+        .hospital-card button {
+            margin-top: auto; /* Прижимает кнопку к низу карточки */
+            align-self: flex-start; /* Кнопка не растягивается на всю ширину */
+            padding: 8px 15px; /* Уменьшим кнопку */
+            font-size: 14px;
         }
         #map {
             width: 100%;
-            height: 400px;
+            height: 450px; /* Немного увеличим высоту карты */
             margin-top: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+         /* Стили для информационного окна */
+        .gm-style .gm-style-iw-c { /* Стиль контейнера InfoWindow */
+            padding: 10px !important;
+            border-radius: 8px !important;
+        }
+        .gm-style .gm-style-iw-d { /* Стиль контента внутри InfoWindow */
+            overflow: hidden !important; /* Убираем лишний скролл, если не нужен */
+        }
+        .info-window-content h3 {
+            margin: 0 0 5px 0;
+            font-size: 1.1em;
+        }
+        .info-window-content p {
+            margin: 3px 0;
+            font-size: 0.9em;
+        }
+        .info-window-content button {
+            margin-top: 8px;
+            padding: 5px 10px;
+            font-size: 13px;
+        }
+         /* Сообщение об ошибке */
+        .error-message {
+            color: #d9534f; /* Красный цвет для ошибок */
+            background-color: #f2dede;
+            border: 1px solid #ebccd1;
+            padding: 10px;
+            margin-top: 15px;
+            border-radius: 5px;
+            text-align: center;
+        }
+         #loading-indicator {
+             display: none; /* Скрыт по умолчанию */
+             text-align: center;
+             padding: 15px;
+             font-weight: bold;
+             color: #555;
+         }
+
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .form-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .form-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+             input[type="number"]#custom-radius {
+                width: 100%; /* На всю ширину на мобильных */
+                box-sizing: border-box; /* Учитываем padding и border */
+             }
+            select {
+                 width: 100%;
+                 box-sizing: border-box;
+            }
+            .button-container {
+                justify-content: center; /* Кнопки по центру */
+                width: 100%;
+            }
         }
     </style>
 </head>
@@ -76,176 +184,396 @@
 
     <div class="container">
         <div class="form-container">
-            <div>
-                <select id="radius">
-                    <option value="1000">1 км</option>
+            <div class="form-controls">
+                <select id="radius" title="Выберите радиус поиска">
+                    <option value="1000" selected>1 км</option>
                     <option value="2000">2 км</option>
-                    <option value="5000">5 км</option>
-                    <option value="10000">10 км</option>
+                    <option value="5000">5 км</option> <option value="10000">10 км</option>
                     <option value="20000">20 км</option>
                 </select>
-                <input type="number" id="custom-radius" placeholder="Или введите радиус вручную (м)" min="100" step="100" style="width: 150px;">
-                <select id="type">
-                    <option value="all">Все типы</option>
-                    <option value="hospital">Больницы</option>
-                    <option value="pharmacy">Аптеки</option>
-                    <option value="medical clinic">Поликлиники</option>
-                </select>
-                <select id="min-rating">
+                <input type="number" id="custom-radius" placeholder="Или свой радиус (метры)" min="100" step="100" title="Введите радиус поиска в метрах">
+                <select id="type" title="Выберите тип учреждения">
+                    <option value="hospital">Больницы</option> <option value="pharmacy">Аптеки</option>
+                    <option value="clinic">Клиники/Поликлиники</option> <option value="dentist">Стоматологии</option>
+                    <option value="doctor">Врачи (Общий профиль)</option>
+                    </select>
+                <select id="min-rating" title="Выберите минимальный рейтинг">
                     <option value="0">Любой рейтинг</option>
-                    <option value="3">От 3 звезд</option>
-                    <option value="4">От 4 звезд</option>
-                    <option value="4.5">От 4.5 звезд</option>
-                    <option value="5">5 звезд</option>
+                    <option value="3">От 3 ★</option>
+                    <option value="4">От 4 ★</option>
+                    <option value="4.5">От 4.5 ★</option>
                 </select>
-            </div>
+                 </div>
             <div class="button-container">
-                <button onclick="findHospitals()">Найти</button>
-                <button onclick="goToHomePage()">На главную</button>
-            </div>
+                <button onclick="findHospitals()" title="Начать поиск">Найти</button>
+                </div>
         </div>
 
-        <div id="hospitals" class="hospital-list">
+        <div id="error-message-container"></div> <div id="loading-indicator">Идет поиск...</div> <div id="map"></div> <div id="hospitals" class="hospital-list">
             </div>
 
-        <div id="map"></div> </div>
+    </div>
+
+    <footer> <p style="text-align: center; padding: 10px; font-size: 0.8em; color: #777;">&copy; 2025 Find Med</p>
+    </footer>
 
     <script>
         let map;
         let userMarker;
-        let placesService;
+        // let placesService; // Объявим позже, когда API загрузится
+        let markersArray = []; // Массив для хранения маркеров найденных мест
+        let openInfoWindow = null; // Храним ссылку на открытое информационное окно
 
+        // Функция инициализации карты
         function initMap() {
+            // Стартовые координаты (Варшава) и уровень приближения
+            const initialCoords = { lat: 52.2298, lng: 21.0118 }; // Warsaw center
             map = new google.maps.Map(document.getElementById("map"), {
-                center: { lat: 52.2298, lng: 21.0118 },
+                center: initialCoords,
                 zoom: 12,
-                libraries: ['places']
+                mapTypeControl: false, // Убрать выбор типа карты (Спутник/Карта)
+                streetViewControl: false // Убрать Street View
             });
-            placesService = new google.maps.places.PlacesService(map);
+            // placesService = new google.maps.places.PlacesService(map); // Инициализируем сервис
 
+            // Получаем геолокацию пользователя
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(function(position) {
-                    const lat = position.coords.latitude;
-                    const lng = position.coords.longitude;
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const userLat = position.coords.latitude;
+                        const userLng = position.coords.longitude;
+                        const userLocation = { lat: userLat, lng: userLng };
 
-                    if (userMarker) {
-                        userMarker.setPosition(new google.maps.LatLng(lat, lng));
-                    } else {
+                        // Удаляем старый маркер пользователя, если он есть
+                        if (userMarker) {
+                            userMarker.setMap(null);
+                        }
+
+                        // Создаем маркер для пользователя
                         userMarker = new google.maps.Marker({
-                            position: { lat, lng },
+                            position: userLocation,
                             map: map,
-                            title: "Ваше местоположение"
+                            title: "Ваше местоположение",
+                            icon: { // Кастомная иконка для пользователя
+                                url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png",
+                                scaledSize: new google.maps.Size(32, 32)
+                            }
                         });
+
+                        // Центрируем карту на пользователе и приближаем
+                        map.setCenter(userLocation);
+                        map.setZoom(14);
+
+                        // Запускаем поиск по умолчанию при загрузке карты и получении геолокации
+                        // findHospitals(); // Раскомментируйте, если хотите автопоиск при загрузке
+
+                    },
+                    (error) => {
+                        console.error("Ошибка геолокации:", error);
+                        displayError("Не удалось получить ваше местоположение. Проверьте разрешения браузера. Поиск будет выполнен от центра Варшавы.");
+                        // Можно оставить карту центрированной на Варшаве или показать маркер по умолчанию
+                         // Если геолокация не удалась, можно все равно разрешить поиск от центра карты
                     }
-                    map.setCenter(new google.maps.LatLng(lat, lng));
-                }, function(error) {
-                    alert("Не удалось получить ваше местоположение.");
-                });
+                );
             } else {
-                alert("Геолокация не поддерживается вашим браузером.");
+                displayError("Геолокация не поддерживается вашим браузером. Поиск будет выполнен от центра Варшавы.");
+                // Карта останется центрированной на Варшаве
             }
+
+             // Закрываем InfoWindow при клике на карту
+            map.addListener('click', () => {
+                closeAllInfoWindows();
+            });
         }
 
+        // Функция поиска медицинских учреждений
         function findHospitals() {
+            clearMarkers(); // Очищаем старые маркеры
+            closeAllInfoWindows(); // Закрываем открытые окна
+            clearError(); // Убираем старые ошибки
+            document.getElementById("hospitals").innerHTML = ""; // Очищаем список результатов
+            document.getElementById("loading-indicator").style.display = "block"; // Показываем индикатор
+
+            // Получаем местоположение: либо пользователя, либо центр карты
+            let searchLocation;
+            if (userMarker) {
+                searchLocation = userMarker.getPosition();
+            } else {
+                searchLocation = map.getCenter(); // Используем центр карты, если нет маркера пользователя
+                 displayError("Поиск выполняется от центра карты, так как ваше точное местоположение не определено.", true); // Информационное сообщение
+            }
+
+             if (!searchLocation) {
+                 displayError("Невозможно определить местоположение для поиска.");
+                 document.getElementById("loading-indicator").style.display = "none";
+                 return;
+             }
+
+            const lat = searchLocation.lat();
+            const lng = searchLocation.lng();
+
+            // Получаем параметры поиска из формы
             let radius = document.getElementById("radius").value;
             const customRadius = document.getElementById("custom-radius").value;
-            if (customRadius) {
-                radius = customRadius;
+            if (customRadius && !isNaN(parseInt(customRadius))) { // Проверяем, что введено число
+                radius = parseInt(customRadius);
+            } else {
+                 radius = parseInt(radius); // Преобразуем значение из select в число
             }
+
+            if (radius <= 0) {
+                 displayError("Радиус поиска должен быть положительным числом.");
+                 document.getElementById("loading-indicator").style.display = "none";
+                 return;
+            }
+
+
             const type = document.getElementById("type").value;
-            const keyword = type;
+            // Google API ожидает тип в нижнем регистре и может не знать 'medical clinic'
+            // Используем более общие типы или будем полагаться на keyword
+            let apiType = type;
+            let keyword = ''; // Ключевое слово для уточнения поиска
+
+            // Корректируем тип для API и задаем ключевое слово
+             switch(type) {
+                 case 'clinic':
+                     apiType = 'hospital'; // Часто клиники регистрируются как hospital
+                     keyword = 'clinic OR поликлиника'; // Уточняем ключевым словом
+                     break;
+                 case 'pharmacy':
+                     apiType = 'pharmacy';
+                     keyword = 'аптека';
+                     break;
+                 case 'dentist':
+                     apiType = 'dentist';
+                     keyword = 'стоматолог OR стоматология';
+                     break;
+                 case 'doctor':
+                     apiType = 'doctor';
+                     keyword = 'врач OR доктор';
+                      break;
+                 case 'hospital':
+                 default:
+                     apiType = 'hospital';
+                     keyword = 'больница OR госпиталь';
+                     break;
+             }
+
+             // Дополнительно можно использовать значение из поля поиска по названию, если оно добавлено
+             // const keywordSearch = document.getElementById("keyword-search")?.value || '';
+             // if (keywordSearch) {
+             //    keyword = keyword ? `${keyword} ${keywordSearch}` : keywordSearch;
+             // }
+
+
             const minRating = document.getElementById("min-rating").value;
 
-            if (!userMarker) {
-                alert("Не удалось определить ваше местоположение.");
-                return;
-            }
+            // Формируем URL для запроса к нашему бэкенду
+            const apiUrl = `/find-hospitals/?lat=${lat}&lng=${lng}&radius=${radius}&type=${apiType}&keyword=${encodeURIComponent(keyword)}&min_rating=${minRating}`;
 
-            const lat = userMarker.getPosition().lat();
-            const lng = userMarker.getPosition().lng();
-
-            fetch(`/find-hospitals/?lat=${lat}&lng=${lng}&radius=${radius}&type=${type}&keyword=${keyword}&min_rating=${minRating}`)
-                .then(response => response.json())
+            // Отправляем запрос на бэкенд
+            fetch(apiUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        // Если бэкенд вернул ошибку (например, 500)
+                        throw new Error(`Ошибка сервера: ${response.statusText} (${response.status})`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
-                    if (data.hospitals) {
+                     document.getElementById("loading-indicator").style.display = "none"; // Скрываем индикатор
+                    if (data.error) {
+                        // Если бэкенд вернул JSON с полем error
+                        throw new Error(data.error);
+                    }
+                    if (data.hospitals && data.hospitals.length > 0) {
                         displayHospitals(data.hospitals);
+                        fitMapToMarkers(data.hospitals); // Масштабируем карту под результаты
                     } else {
-                        alert("Медицинские учреждения не найдены.");
+                        displayError("Медицинские учреждения по вашему запросу не найдены.", true); // Информационное сообщение
                     }
                 })
-                .catch(error => console.error("Ошибка при получении данных:", error));
+                .catch(error => {
+                    console.error("Ошибка при получении данных:", error);
+                    displayError(`Произошла ошибка при поиске: ${error.message}`);
+                     document.getElementById("loading-indicator").style.display = "none"; // Скрываем индикатор
+                });
         }
 
+                // Функция отображения найденных учреждений
         function displayHospitals(hospitals) {
             const container = document.getElementById("hospitals");
-            container.innerHTML = "";
+            container.innerHTML = ""; // Очищаем предыдущие карточки
+            clearMarkers(); // Очищаем старые маркеры
+            closeAllInfoWindows(); // Закрываем открытые окна
 
             hospitals.forEach(hospital => {
+                if (!hospital || typeof hospital.lat !== 'number' || typeof hospital.lng !== 'number') {
+                    console.warn("Пропущено некорректное учреждение:", hospital);
+                    return; // Пропускаем некорректные данные
+                }
+
+                // --- Создание маркера ---
                 const hospitalMarker = new google.maps.Marker({
                     position: { lat: hospital.lat, lng: hospital.lng },
                     map: map,
                     title: hospital.name,
-                    // icon: 'URL_СТАНДАРТНОЙ_ИКОНКИ' // Опционально
+                    animation: google.maps.Animation.DROP
                 });
+                markersArray.push(hospitalMarker);
 
-                if (hospital.place_id) {
-                    placesService.getDetails({
-                        placeId: hospital.place_id,
-                        fields: ['rating']
-                    }, (place, status) => {
-                        if (status === google.maps.places.PlacesServiceStatus.OK && place && place.rating) {
-                            const infoWindow = new google.maps.InfoWindow({
-                                content: `<div><h3>${hospital.name}</h3><p>Рейтинг: ${place.rating} ⭐</p><button onclick="openInGoogleMaps(${hospital.lat}, ${hospital.lng}, '${hospital.name}')">Открыть в Google Maps</button></div>`
-                            });
-                            hospitalMarker.addListener('click', () => {
-                                infoWindow.open(map, hospitalMarker);
-                            });
-                        } else {
-                            hospitalMarker.addListener('click', () => {
-                                openInGoogleMaps(hospital.lat, hospital.lng, hospital.name);
-                            });
-                        }
-                    });
-
-                    hospitalMarker.addListener('mouseover', () => {
-                        hospitalMarker.setIcon('URL_ВЫДЕЛЕННОЙ_ИКОНКИ'); // Замените на URL вашей выделенной иконки
-                    });
-                    hospitalMarker.addListener('mouseout', () => {
-                        hospitalMarker.setIcon(null); // Или URL стандартной иконки
-                    });
-                } else {
-                    hospitalMarker.addListener('click', () => {
-                        openInGoogleMaps(hospital.lat, hospital.lng, hospital.name);
-                    });
+                // --- Создание контента для InfoWindow ---
+                const safeName = hospital.name ? hospital.name.replace(/'/g, "\\'").replace(/"/g, '"') : 'Место';
+                let infoWindowContent = `<div class="info-window-content"><h3>${hospital.name || 'Название не указано'}</h3>`;
+                if (hospital.rating) {
+                    infoWindowContent += `<p>Рейтинг: ${hospital.rating} ★</p>`;
+                }
+                if (hospital.address) {
+                    infoWindowContent += `<p>${hospital.address}</p>`;
                 }
 
+                // Добавляем ссылку на бронирование или веб-сайт в информационное окно
+                if (hospital.book) {
+                    infoWindowContent += `<button onclick="window.open('${hospital.book}', '_blank', 'noopener noreferrer')">Записаться на прием</button>`;
+                } else if (hospital.url) {
+                    infoWindowContent += `<button onclick="window.open('${hospital.url}', '_blank', 'noopener noreferrer')">Веб-сайт</button>`;
+                }
+                infoWindowContent += `<button onclick="openInGoogleMaps(${hospital.lat}, ${hospital.lng}, '${safeName}')">Маршрут в Google Maps</button></div>`;
+
+                const infoWindow = new google.maps.InfoWindow({
+                    content: infoWindowContent
+                });
+
+                hospitalMarker.addListener('click', () => {
+                    closeAllInfoWindows();
+                    infoWindow.open(map, hospitalMarker);
+                    openInfoWindow = infoWindow;
+                    map.panTo(hospitalMarker.getPosition());
+                });
+
+                // --- Создание карточки учреждения ---
                 const card = document.createElement("div");
                 card.className = "hospital-card";
                 card.innerHTML = `
-                    <h3>${hospital.name}</h3>
-                    <p>Адрес: ${hospital.address}</p>
-                    <p>Координаты: ${hospital.lat}, ${hospital.lng}</p>
-                    ${hospital.rating ? `<p>Рейтинг: ${hospital.rating} ⭐</p>` : '<p>Рейтинг отсутствует</p>'}
-                    <button onclick="openInGoogleMaps(${hospital.lat}, ${hospital.lng}, '${hospital.name}')">Открыть в Google Maps</button>
+                    <h3>${hospital.name || 'Название не указано'}</h3>
+                    <p>Адрес: ${hospital.address ? hospital.address : 'Адрес не указан'}</p>
+                    ${hospital.rating ? `<p>Рейтинг: ${hospital.rating} ★</p>` : '<p>Рейтинг: нет данных</p>'}
                 `;
+
+                // Добавляем кнопку для бронирования или веб-сайта
+                if (hospital.book) {
+                    const bookButton = document.createElement("button");
+                    bookButton.textContent = "Записаться на прием";
+                    bookButton.onclick = () => window.open(hospital.book, '_blank', 'noopener noreferrer');
+                    card.appendChild(bookButton);
+                } else if (hospital.url) {
+                    const websiteButton = document.createElement("button");
+                    websiteButton.textContent = "Веб-сайт";
+                    websiteButton.onclick = () => window.open(hospital.url, '_blank', 'noopener noreferrer');
+                    card.appendChild(websiteButton);
+                } else {
+                    const routeButton = document.createElement("button");
+                    routeButton.textContent = "Маршрут";
+                    routeButton.onclick = () => openInGoogleMaps(hospital.lat, hospital.lng, safeName);
+                    card.appendChild(routeButton);
+                }
+
+                // Добавляем подсветку маркера при наведении на карточку
+                card.addEventListener('mouseenter', () => {
+                    hospitalMarker.setAnimation(google.maps.Animation.BOUNCE);
+                });
+                card.addEventListener('mouseleave', () => {
+                    hospitalMarker.setAnimation(null);
+                });
+                card.addEventListener('click', () => {
+                    map.panTo(hospitalMarker.getPosition());
+                    map.setZoom(15);
+                    closeAllInfoWindows();
+                    infoWindow.open(map, hospitalMarker);
+                    openInfoWindow = infoWindow;
+                });
+
                 container.appendChild(card);
             });
+            fitMapToMarkers(hospitals);
         }
 
+         // Функция для масштабирования карты, чтобы вместить все маркеры
+        function fitMapToMarkers(hospitals) {
+            if (markersArray.length === 0) return; // Нечего масштабировать
+
+            const bounds = new google.maps.LatLngBounds();
+             // Добавляем маркер пользователя в границы, если он есть
+             if (userMarker) {
+                 bounds.extend(userMarker.getPosition());
+             }
+             // Добавляем все маркеры учреждений
+            markersArray.forEach(marker => {
+                bounds.extend(marker.getPosition());
+            });
+
+            map.fitBounds(bounds); // Автоматически масштабирует и центрирует
+
+             // Избегаем слишком сильного приближения, если только один маркер
+             if (markersArray.length === 1 && !userMarker) {
+                 map.setZoom(15); // Устанавливаем минимальный зум для одного результата
+             } else if (bounds.getNorthEast().equals(bounds.getSouthWest())) {
+                 // Если все точки совпадают (или только одна точка)
+                  map.setCenter(bounds.getCenter());
+                  map.setZoom(15); // Установите подходящий уровень масштабирования
+              }
+        }
+
+
+        // Функция очистки маркеров с карты
+        function clearMarkers() {
+            for (let i = 0; i < markersArray.length; i++) {
+                markersArray[i].setMap(null); // Удаляем маркер с карты
+            }
+            markersArray = []; // Очищаем массив
+        }
+
+        // Функция закрытия открытого InfoWindow
+        function closeAllInfoWindows() {
+            if (openInfoWindow) {
+                openInfoWindow.close();
+                openInfoWindow = null;
+            }
+        }
+
+        // Функция открытия Google Maps с маршрутом
         function openInGoogleMaps(lat, lng, name) {
-            const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}&ll=${lat},${lng}`;
-            window.open(url, '_blank');
+            // Формируем URL для поиска места по названию
+            const query = encodeURIComponent(name);
+            const url = `https://www.google.com/maps/search/?api=1&query=${query}`;
+            window.open(url, '_blank'); // Открываем в новой вкладке
+}
+
+        // Функция для отображения сообщений об ошибках
+        function displayError(message, isInfo = false) {
+             const container = document.getElementById("error-message-container");
+             container.innerHTML = `<div class="error-message ${isInfo ? 'info-message' : ''}">${message}</div>`; // Добавляем класс для инфо-сообщений, если нужно
+             // Скрыть индикатор загрузки, если он был виден
+             document.getElementById("loading-indicator").style.display = "none";
         }
 
-        function goToHomePage() {
-            window.location.href = '/';
+        // Функция для очистки сообщений об ошибках
+        function clearError() {
+            document.getElementById("error-message-container").innerHTML = "";
         }
 
-        // Инициализация карты после загрузки API
-        function init() {
+        // (Не используется, если это главная страница)
+        // function goToHomePage() {
+        //     window.location.href = '/';
+        // }
+
+        // Инициализация карты после загрузки API Google Maps
+        function initialize() {
             initMap();
         }
+
     </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key={{ google_api_key }}&libraries=places&callback=init" async defer></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ google_api_key }}&libraries=places&callback=initialize" async defer></script>
+
 </body>
 </html>
