@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from University_Project.settings import GOOGLE_API_KEY
+from Find_Med.settings import GOOGLE_API_KEY
 from django.http import JsonResponse
 from django.conf import settings
 import requests
