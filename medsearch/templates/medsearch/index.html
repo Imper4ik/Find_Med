@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Find Med - Поиск медицинских учреждений</title>
-    <script src="https://maps.googleapis.com/maps/api/js?key={{ google_api_key }}&callback=initMap" async defer></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -36,7 +35,7 @@
         }
         .button-container {
             display: flex;
-            gap: 10px; /* Для промежутка между кнопками */
+            gap: 10px;
         }
         button {
             padding: 10px 20px;
@@ -92,9 +91,14 @@
                     <option value="pharmacy">Аптеки</option>
                     <option value="medical clinic">Поликлиники</option>
                 </select>
+                <select id="min-rating">
+                    <option value="0">Любой рейтинг</option>
+                    <option value="3">От 3 звезд</option>
+                    <option value="4">От 4 звезд</option>
+                    <option value="4.5">От 4.5 звезд</option>
+                    <option value="5">5 звезд</option>
+                </select>
             </div>
-
-            <!-- Обновленная обертка для кнопок -->
             <div class="button-container">
                 <button onclick="findHospitals()">Найти</button>
                 <button onclick="goToHomePage()">На главную</button>
@@ -102,23 +106,22 @@
         </div>
 
         <div id="hospitals" class="hospital-list">
-            <!-- Здесь будут отображаться медицинские учреждения -->
-        </div>
+            </div>
 
-        <div id="map"></div> <!-- Карта Google -->
-
-    </div>
+        <div id="map"></div> </div>
 
     <script>
         let map;
         let userMarker;
+        let placesService;
 
-        // Функция инициализации карты
         function initMap() {
             map = new google.maps.Map(document.getElementById("map"), {
-                center: { lat: 52.2298, lng: 21.0118 }, // Координаты Варшавы
-                zoom: 12
+                center: { lat: 52.2298, lng: 21.0118 },
+                zoom: 12,
+                libraries: ['places']
             });
+            placesService = new google.maps.places.PlacesService(map);
 
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(function(position) {
@@ -134,7 +137,6 @@
                             title: "Ваше местоположение"
                         });
                     }
-
                     map.setCenter(new google.maps.LatLng(lat, lng));
                 }, function(error) {
                     alert("Не удалось получить ваше местоположение.");
@@ -144,23 +146,15 @@
             }
         }
 
-        // Функция поиска медицинских учреждений
         function findHospitals() {
             let radius = document.getElementById("radius").value;
             const customRadius = document.getElementById("custom-radius").value;
             if (customRadius) {
                 radius = customRadius;
             }
-
-            const typeElement = document.getElementById("type");
-            if (!typeElement) {
-                alert("Не найден элемент для типа учреждения.");
-                return;
-            }
-            const type = typeElement.value; // Тип учреждения (например, больница)
-
-            // Присваиваем значение переменной type переменной keyword
-            const keyword = type;  // Теперь keyword = type
+            const type = document.getElementById("type").value;
+            const keyword = type;
+            const minRating = document.getElementById("min-rating").value;
 
             if (!userMarker) {
                 alert("Не удалось определить ваше местоположение.");
@@ -170,8 +164,7 @@
             const lat = userMarker.getPosition().lat();
             const lng = userMarker.getPosition().lng();
 
-            // Формируем запрос для поиска с учетом типа медицинского учреждения
-            fetch(`/find-hospitals/?lat=${lat}&lng=${lng}&radius=${radius}&type=${type}&keyword=${keyword}`)
+            fetch(`/find-hospitals/?lat=${lat}&lng=${lng}&radius=${radius}&type=${type}&keyword=${keyword}&min_rating=${minRating}`)
                 .then(response => response.json())
                 .then(data => {
                     if (data.hospitals) {
@@ -183,33 +176,76 @@
                 .catch(error => console.error("Ошибка при получении данных:", error));
         }
 
-        // Функция отображения медицинских учреждений на странице
         function displayHospitals(hospitals) {
             const container = document.getElementById("hospitals");
-            container.innerHTML = ""; // Очищаем предыдущие результаты
+            container.innerHTML = "";
 
             hospitals.forEach(hospital => {
+                const hospitalMarker = new google.maps.Marker({
+                    position: { lat: hospital.lat, lng: hospital.lng },
+                    map: map,
+                    title: hospital.name,
+                    // icon: 'URL_СТАНДАРТНОЙ_ИКОНКИ' // Опционально
+                });
+
+                if (hospital.place_id) {
+                    placesService.getDetails({
+                        placeId: hospital.place_id,
+                        fields: ['rating']
+                    }, (place, status) => {
+                        if (status === google.maps.places.PlacesServiceStatus.OK && place && place.rating) {
+                            const infoWindow = new google.maps.InfoWindow({
+                                content: `<div><h3>${hospital.name}</h3><p>Рейтинг: ${place.rating} ⭐</p><button onclick="openInGoogleMaps(${hospital.lat}, ${hospital.lng}, '${hospital.name}')">Открыть в Google Maps</button></div>`
+                            });
+                            hospitalMarker.addListener('click', () => {
+                                infoWindow.open(map, hospitalMarker);
+                            });
+                        } else {
+                            hospitalMarker.addListener('click', () => {
+                                openInGoogleMaps(hospital.lat, hospital.lng, hospital.name);
+                            });
+                        }
+                    });
+
+                    hospitalMarker.addListener('mouseover', () => {
+                        hospitalMarker.setIcon('URL_ВЫДЕЛЕННОЙ_ИКОНКИ'); // Замените на URL вашей выделенной иконки
+                    });
+                    hospitalMarker.addListener('mouseout', () => {
+                        hospitalMarker.setIcon(null); // Или URL стандартной иконки
+                    });
+                } else {
+                    hospitalMarker.addListener('click', () => {
+                        openInGoogleMaps(hospital.lat, hospital.lng, hospital.name);
+                    });
+                }
+
                 const card = document.createElement("div");
                 card.className = "hospital-card";
                 card.innerHTML = `
                     <h3>${hospital.name}</h3>
                     <p>Адрес: ${hospital.address}</p>
                     <p>Координаты: ${hospital.lat}, ${hospital.lng}</p>
+                    ${hospital.rating ? `<p>Рейтинг: ${hospital.rating} ⭐</p>` : '<p>Рейтинг отсутствует</p>'}
+                    <button onclick="openInGoogleMaps(${hospital.lat}, ${hospital.lng}, '${hospital.name}')">Открыть в Google Maps</button>
                 `;
                 container.appendChild(card);
-
-                const hospitalMarker = new google.maps.Marker({
-                    position: { lat: hospital.lat, lng: hospital.lng },
-                    map: map,
-                    title: hospital.name
-                });
             });
         }
 
-        // Функция перехода на главную страницу
+        function openInGoogleMaps(lat, lng, name) {
+            const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(name)}&ll=${lat},${lng}`;
+            window.open(url, '_blank');
+        }
+
         function goToHomePage() {
-            window.location.href = '/'; // Замените '/' на URL вашей главной страницы
+            window.location.href = '/';
+        }
+
+        // Инициализация карты после загрузки API
+        function init() {
+            initMap();
         }
     </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key={{ google_api_key }}&libraries=places&callback=init" async defer></script>
 </body>
 </html>

@@ -1,3 +1,4 @@
+# Импорт необходимых библиотек
 from django.shortcuts import render
 from Find_Med.settings import GOOGLE_API_KEY
 from django.http import JsonResponse
@@ -8,7 +9,6 @@ import logging
 # Настроим логирование
 logger = logging.getLogger(__name__)
 
-
 # Индексная страница
 def index(request):
     context = {
@@ -16,21 +16,22 @@ def index(request):
     }
     return render(request, 'medsearch/index.html', context)
 
-
+# Функция для поиска больниц с учетом рейтинга
 def find_hospitals(request):
     try:
-        # Получаем параметры lat, lng, radius, type и keyword из GET-запроса
+        # Получаем параметры lat, lng, radius, type, keyword и min_rating из GET-запроса
         lat = float(request.GET.get('lat'))
         lng = float(request.GET.get('lng'))
         radius = int(request.GET.get('radius', 5000))  # Радиус по умолчанию 5000 метров
         keyword = request.GET.get('keyword', '')  # Ключевое слово
         type_filter = request.GET.get('type', 'hospital')  # Тип учреждения по умолчанию - hospital
+        min_rating = float(request.GET.get('min_rating', 0))  # Минимальный рейтинг по умолчанию 0
 
         # Ваш ключ API Google
         api_key = settings.GOOGLE_API_KEY
 
-        # URL для запроса Google Places API с учетом типа и ключевого слова
-        url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={lat},{lng}&radius={radius}&type={type_filter}&keyword={keyword}&key={api_key}"
+        # URL для запроса Google Places API с учетом типа, ключевого слова и минимального рейтинга
+        url = f"https://maps.googleapis.com/maps/api/place/nearbysearch/json?location={lat},{lng}&radius={radius}&type={type_filter}&keyword={keyword}&min_rating={min_rating}&key={api_key}"
 
         # Получение данных с API
         response = requests.get(url)
@@ -40,25 +41,23 @@ def find_hospitals(request):
             return JsonResponse({"error": "Не удалось получить данные от Google API"}, status=500)
 
         data = response.json()
-
         hospitals = []
-
-        # Извлекаем информацию о медицинских учреждениях
         for result in data.get('results', []):
-            hospital = {
-                'name': result.get('name'),
-                'address': result.get('vicinity'),
-                'lat': result['geometry']['location']['lat'],
-                'lng': result['geometry']['location']['lng'],
-            }
-            hospitals.append(hospital)
-
+            rating = result.get('rating')
+            if rating is not None and rating >= min_rating:  # Фильтрация здесь
+                hospital = {
+                    'name': result.get('name'),
+                    'address': result.get('vicinity'),
+                    'lat': result['geometry']['location']['lat'],
+                    'lng': result['geometry']['location']['lng'],
+                    'rating': rating,
+                    'place_id': result.get('place_id')
+                }
+                hospitals.append(hospital)
         return JsonResponse({'hospitals': hospitals})
-
     except Exception as e:
         logger.error(f"Error finding hospitals: {e}")
         return JsonResponse({"error": "Произошла ошибка на сервере"}, status=500)
-
 
 # Эндпоинт для расчета расстояния до больницы
 def calculate_distance(request):
